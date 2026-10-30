@@ -53,9 +53,8 @@ The 0 and 50 quality bounds are enforced only in the `_degrade` and
 Conjured items are matched by the `Conjured` name prefix rather than an exact
 name because the requirement describes a category of items, not one product.
 
-Quality values outside 0..50 (other than Sulfuras at 80) are never produced by
-this code, but if one is supplied the original behaviour is kept: an
-out-of-range value is left alone rather than clamped.
+A quality already outside 0..50 is never pulled back to the bound. Only the
+changes this code makes are clamped, which matches the original behaviour.
 
 ### Adding an item kind
 
