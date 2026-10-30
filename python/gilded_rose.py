@@ -1,39 +1,12 @@
 # -*- coding: utf-8 -*-
+from abc import ABC, abstractmethod
 
-class GildedRose(object):
+MIN_QUALITY = 0
+MAX_QUALITY = 50
 
-    def __init__(self, items):
-        self.items = items
-
-    def update_quality(self):
-        for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
-                        item.quality = item.quality - 1
-            else:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
-                        if item.sell_in < 11:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
-                item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
-                                item.quality = item.quality - 1
-                    else:
-                        item.quality = item.quality - item.quality
-                else:
-                    if item.quality < 50:
-                        item.quality = item.quality + 1
+AGED_BRIE = "Aged Brie"
+BACKSTAGE_PASS = "Backstage passes to a TAFKAL80ETC concert"
+SULFURAS = "Sulfuras, Hand of Ragnaros"
 
 
 class Item:
@@ -44,3 +17,88 @@ class Item:
 
     def __repr__(self):
         return "%s, %s, %s" % (self.name, self.sell_in, self.quality)
+
+
+class ItemUpdater(ABC):
+    """One day's worth of ageing for one kind of item.
+
+    Subclasses implement `update`. The quality helpers here are the only
+    place the 0..50 bounds are enforced, so a new kind cannot bypass them.
+    """
+
+    @abstractmethod
+    def update(self, item: Item) -> None: ...
+
+    @staticmethod
+    def _degrade(item: Item, amount: int) -> None:
+        if item.quality > MIN_QUALITY:
+            item.quality = max(item.quality - amount, MIN_QUALITY)
+
+    @staticmethod
+    def _improve(item: Item, amount: int) -> None:
+        if item.quality < MAX_QUALITY:
+            item.quality = min(item.quality + amount, MAX_QUALITY)
+
+    @staticmethod
+    def _age(item: Item) -> bool:
+        """Advance one day and report whether the sell-by date has passed."""
+        item.sell_in -= 1
+        return item.sell_in < 0
+
+
+class DegradingItemUpdater(ItemUpdater):
+    """Ordinary goods: lose `rate` quality per day, twice that once expired."""
+
+    def __init__(self, rate: int = 1):
+        self._rate = rate
+
+    def update(self, item: Item) -> None:
+        self._degrade(item, self._rate)
+        if self._age(item):
+            self._degrade(item, self._rate)
+
+
+class AgedBrieUpdater(ItemUpdater):
+    def update(self, item: Item) -> None:
+        self._improve(item, 1)
+        if self._age(item):
+            self._improve(item, 1)
+
+
+class BackstagePassUpdater(ItemUpdater):
+    def update(self, item: Item) -> None:
+        if item.sell_in > 10:
+            self._improve(item, 1)
+        elif item.sell_in > 5:
+            self._improve(item, 2)
+        else:
+            self._improve(item, 3)
+        if self._age(item):
+            item.quality = MIN_QUALITY
+
+
+class LegendaryItemUpdater(ItemUpdater):
+    def update(self, item: Item) -> None:
+        pass
+
+
+DEFAULT_UPDATER: ItemUpdater = DegradingItemUpdater()
+
+UPDATERS_BY_NAME: dict[str, ItemUpdater] = {
+    AGED_BRIE: AgedBrieUpdater(),
+    BACKSTAGE_PASS: BackstagePassUpdater(),
+    SULFURAS: LegendaryItemUpdater(),
+}
+
+
+def updater_for(item: Item) -> ItemUpdater:
+    return UPDATERS_BY_NAME.get(item.name, DEFAULT_UPDATER)
+
+
+class GildedRose:
+    def __init__(self, items: list[Item]):
+        self.items = items
+
+    def update_quality(self) -> None:
+        for item in self.items:
+            updater_for(item).update(item)
