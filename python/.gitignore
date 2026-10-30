@@ -4,3 +4,6 @@
 .idea/
 *.iml
 uv.lock
+.approval_tests_temp/
+.mcp.json
+*.received.txt
