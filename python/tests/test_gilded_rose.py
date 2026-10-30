@@ -82,5 +82,22 @@ class BackstagePassTest(unittest.TestCase):
         self.assertEqual((14, 50), update(BACKSTAGE, 15, 50))
 
 
+class ConjuredItemTest(unittest.TestCase):
+    def test_quality_drops_by_two(self):
+        self.assertEqual((2, 4), update("Conjured Mana Cake", 3, 6))
+
+    def test_quality_drops_by_four_after_sell_by(self):
+        self.assertEqual((-1, 2), update("Conjured Mana Cake", 0, 6))
+
+    def test_quality_never_negative(self):
+        self.assertEqual((2, 0), update("Conjured Mana Cake", 3, 1))
+
+    def test_quality_never_negative_after_sell_by(self):
+        self.assertEqual((-1, 0), update("Conjured Mana Cake", 0, 3))
+
+    def test_any_conjured_item_is_conjured(self):
+        self.assertEqual((4, 8), update("Conjured Dagger", 5, 10))
+
+
 if __name__ == '__main__':
     unittest.main()

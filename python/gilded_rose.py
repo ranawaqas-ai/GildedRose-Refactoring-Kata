@@ -7,6 +7,9 @@ MAX_QUALITY = 50
 AGED_BRIE = "Aged Brie"
 BACKSTAGE_PASS = "Backstage passes to a TAFKAL80ETC concert"
 SULFURAS = "Sulfuras, Hand of Ragnaros"
+# The spec names a category ("Conjured" items), not one product, so any
+# item whose name starts with this word is conjured.
+CONJURED_PREFIX = "Conjured"
 
 
 class Item:
@@ -83,6 +86,7 @@ class LegendaryItemUpdater(ItemUpdater):
 
 
 DEFAULT_UPDATER: ItemUpdater = DegradingItemUpdater()
+CONJURED_UPDATER: ItemUpdater = DegradingItemUpdater(rate=2)
 
 UPDATERS_BY_NAME: dict[str, ItemUpdater] = {
     AGED_BRIE: AgedBrieUpdater(),
@@ -92,6 +96,8 @@ UPDATERS_BY_NAME: dict[str, ItemUpdater] = {
 
 
 def updater_for(item: Item) -> ItemUpdater:
+    if item.name.startswith(CONJURED_PREFIX):
+        return CONJURED_UPDATER
     return UPDATERS_BY_NAME.get(item.name, DEFAULT_UPDATER)
 
 
